@@ -1,0 +1,1 @@
+web: slackman -port=$PORT -slack_token=$SLACK_TOKEN
