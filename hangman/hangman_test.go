@@ -1,6 +1,8 @@
 package hangman
 
 import (
+  "encoding/json"
+  // "fmt"
   "github.com/stretchr/testify/assert"
   "testing"
 )
@@ -110,4 +112,28 @@ func TestGuessLetterIncorrectlyGameOver(t *testing.T) {
   assert.Equal(t, expectedLettersGuessed, gameState.LettersGuessed)
   assert.Equal(t, expectedGuessesRemaining, gameState.GuessesRemaining)
   assert.Equal(t, expectedGameOver, gameState.GameOver)
+}
+
+func TestJSONEncoding(t *testing.T) {
+  gameState := GameState{}
+  gameState.Initialize("hangman")
+
+  bytes, _ := json.Marshal(gameState)
+
+  newGameState := GameState{}
+  if err := json.Unmarshal(bytes, &newGameState); err != nil {
+    panic(err)
+  }
+
+  expectedWordToGuess := []string{"h", "a", "n", "g", "m", "a", "n"}
+  expectedWordProgress := []string{"_", "_", "_", "_", "_", "_", "_"}
+  expectedLettersGuessed := []string{}
+  expectedGuessesRemaining := 6
+  expectedGameOver := false
+
+  assert.Equal(t, expectedWordToGuess, newGameState.WordToGuess)
+  assert.Equal(t, expectedWordProgress, newGameState.WordProgress)
+  assert.Equal(t, expectedLettersGuessed, newGameState.LettersGuessed)
+  assert.Equal(t, expectedGuessesRemaining, newGameState.GuessesRemaining)
+  assert.Equal(t, expectedGameOver, newGameState.GameOver)
 }

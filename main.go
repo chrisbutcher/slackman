@@ -1,83 +1,82 @@
 package main
 
 import (
-  // "flag"
-  // "fmt"
-  // "github.com/gin-gonic/gin"
-  // "net/http"
+  "flag"
   "fmt"
   "github.com/chrisbutcher/slackman/hangman"
-  // "github.com/garyburd/redigo/redis"
+  "github.com/chrisbutcher/slackman/persistence"
+  "github.com/gin-gonic/gin"
+  "net/http"
+  // "regexp"
   // "strings"
 )
 
+// binding:"required"
+type SlackCommand struct {
+  Token       string `form:"token"`
+  TeamID      string `form:"team_id"`
+  TeamDomain  string `form:"team_domain"`
+  ChannelID   string `form:"channel_id"`
+  ChannelName string `form:"channel_name"`
+  UserID      string `form:"user_id"`
+  UserName    string `form:"user_name"`
+  Command     string `form:"command"`
+  Text        string `form:"text"`
+}
+
 func main() {
+  port := flag.String("port", "3000", "HTTP port")
+  slack_token := flag.String("slack_token", "debug", "Slack verification token")
+  redis_url := flag.String("redis_url", "[localhost]:6379", "Redis address")
+  redis_pw := flag.String("redis_pw", "", "Redis password")
+  flag.Parse()
+
   gameState := hangman.GameState{}
   gameState.Initialize("hangman")
 
-  for {
-    if gameState.GameOver || gameState.GameWon {
-      break
+  db := persistence.SlackmanDB{}
+  db.Initialize(*redis_url, *redis_pw)
+  defer db.Close()
+
+  db.SetGameState(gameState)
+
+  r := gin.New()
+
+  // Global middleware
+  r.Use(gin.Logger())
+  r.Use(gin.Recovery())
+
+  r.GET("/", func(c *gin.Context) {
+    c.String(http.StatusOK, "bot active")
+  })
+
+  r.POST("/command", func(c *gin.Context) {
+    var slackCmd SlackCommand
+    c.Bind(&slackCmd)
+
+    if slackCmd.Token != *slack_token {
+      c.String(http.StatusUnauthorized, "not authorized")
+      return
     }
 
-    fmt.Println(gameState)
+    redisGameState := db.ReadGameState()
 
-    var input string
-    _, _ = fmt.Scanf("%s", &input)
+    if slackCmd.Command == "/hang" {
+      if slackCmd.Text != "" {
+        redisGameState.GuessLetter(slackCmd.Text)
 
-    gameState.GuessLetter(input)
-  }
+        if redisGameState.GameWon {
+          c.String(http.StatusOK, "Game won! "+redisGameState.GameStatusLine())
+          redisGameState.Initialize("hangman")
+          db.SetGameState(redisGameState)
+        } else {
+          db.SetGameState(redisGameState)
+          c.String(http.StatusOK, redisGameState.GameStatusLine())
+        }
+      }
+    }
+  })
 
-  fmt.Println(gameState)
+  fmt.Println("Listening on port " + *port)
+  r.Run(":" + *port)
 }
-
-// type SlackCommand struct {
-//   Token       string `form:"token" binding:"required"`
-//   TeamID      string `form:"team_id" binding:"required"`
-//   TeamDomain  string `form:"team_domain" binding:"required"`
-//   ChannelID   string `form:"channel_id" binding:"required"`
-//   ChannelName string `form:"channel_name" binding:"required"`
-//   UserID      string `form:"user_id" binding:"required"`
-//   UserName    string `form:"user_name" binding:"required"`
-//   Command     string `form:"command" binding:"required"`
-//   Text        string `form:"text" binding:"required"`
-// }
-
-// func buildReply(slackCmd SlackCommand) string {
-//   msg := "Hello " + slackCmd.UserName + ". "
-//   msg += "[command: " + slackCmd.Command + ", "
-//   msg += "text:" + slackCmd.Text + ", "
-//   msg += "channel_name: " + slackCmd.ChannelName + "]"
-//   return msg
-// }
-
-// func main() {
-//   port := flag.String("port", "3000", "HTTP port")
-//   slack_token := flag.String("slack_token", "debug", "Slack verification token")
-//   flag.Parse()
-
-//   r := gin.New()
-
-//   // Global middleware
-//   r.Use(gin.Logger())
-//   r.Use(gin.Recovery())
-
-//   r.GET("/", func(c *gin.Context) {
-//     c.String(http.StatusOK, "bot active")
-//   })
-
-//   r.POST("/bot/command", func(c *gin.Context) {
-//     var slackCmd SlackCommand
-//     c.Bind(&slackCmd)
-
-//     if slackCmd.Token != *slack_token {
-//       c.String(http.StatusUnauthorized, "not authorized")
-//       return
-//     }
-
-//     c.String(http.StatusOK, buildReply(slackCmd))
-//   })
-
-//   fmt.Println("Listening on port " + *port)
-//   r.Run(":" + *port)
-// }

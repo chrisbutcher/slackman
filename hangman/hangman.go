@@ -1,16 +1,31 @@
 package hangman
 
 import (
+  "encoding/json"
+  "fmt"
   "strings"
 )
 
 type GameState struct {
-  WordToGuess      []string
-  WordProgress     []string
-  LettersGuessed   []string
-  GuessesRemaining int
-  GameOver         bool
-  GameWon          bool
+  WordToGuess      []string `json:"word_to_guess"`
+  WordProgress     []string `json:"word_progress"`
+  LettersGuessed   []string `json:"leters_guessed"`
+  GuessesRemaining int      `json:"guesses_remaining"`
+  GameOver         bool     `json:"game_over"`
+  GameWon          bool     `json:"game_won"`
+}
+
+func (g GameState) String() string {
+  bytes, _ := json.Marshal(g)
+  return fmt.Sprintf("%s", bytes)
+}
+
+func (g *GameState) GameStatusLine() string {
+  wordProgress := strings.Join(g.WordProgress, ",") + " "
+  lettersGuessed := "Guesses: [" + strings.Join(g.LettersGuessed, ",") + "] "
+  guessesRemaining := "Guesses left: " + string(g.GuessesRemaining)
+
+  return wordProgress + lettersGuessed + guessesRemaining
 }
 
 func (g *GameState) Initialize(rawWordToGuess string) {
@@ -18,7 +33,6 @@ func (g *GameState) Initialize(rawWordToGuess string) {
     g.GameOver = true
     return
   }
-
   g.WordToGuess = strings.Split(rawWordToGuess, "")
 
   g.WordProgress = make([]string, len(g.WordToGuess))
@@ -27,9 +41,7 @@ func (g *GameState) Initialize(rawWordToGuess string) {
   }
 
   g.LettersGuessed = make([]string, 0)
-
   g.GuessesRemaining = 6 // head = 5 (remaining), body, arm, arm, leg, leg = 0
-
   g.GameOver = false
   g.GameWon = false
 }
@@ -42,7 +54,7 @@ func (g *GameState) GuessLetter(letterGuessed string) {
       letterFound = true
       g.WordProgress[i] = letterGuessed
 
-      if g.CheckGameWon() {
+      if g.checkGameWon() {
         g.GameWon = true
         return
       }
@@ -71,7 +83,7 @@ func (g *GameState) LetterAlreadyGuessed(letterGuessed string) bool {
   return false
 }
 
-func (g *GameState) CheckGameWon() bool {
+func (g *GameState) checkGameWon() bool {
   gameWon := true
   for _, letter := range g.WordProgress {
     if letter == "_" {
