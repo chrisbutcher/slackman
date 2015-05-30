@@ -62,7 +62,7 @@ func main() {
     redisGameState := db.ReadGameState()
 
     if slackCmd.Command == "/hang" {
-      if slackCmd.Text != "" {
+      if slackCmd.Text != "" && len(slackCmd.Text) == 1 {
         redisGameState.GuessLetter(slackCmd.Text)
 
         if redisGameState.GameWon {
@@ -73,7 +73,11 @@ func main() {
           db.SetGameState(redisGameState)
           c.String(http.StatusOK, redisGameState.GameStatusLine())
         }
+      } else {
+        c.String(http.StatusOK, "Illegal guess")
       }
+    } else {
+      c.String(http.StatusOK, "Unrecognized command")
     }
   })
 

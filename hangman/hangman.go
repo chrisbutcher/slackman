@@ -3,6 +3,7 @@ package hangman
 import (
   "encoding/json"
   "fmt"
+  "strconv"
   "strings"
 )
 
@@ -23,7 +24,7 @@ func (g GameState) String() string {
 func (g *GameState) GameStatusLine() string {
   wordProgress := strings.Join(g.WordProgress, ",") + " "
   lettersGuessed := "Guesses: [" + strings.Join(g.LettersGuessed, ",") + "] "
-  guessesRemaining := "Guesses left: " + string(g.GuessesRemaining)
+  guessesRemaining := "Guesses left: " + strconv.Itoa(g.GuessesRemaining)
 
   return wordProgress + lettersGuessed + guessesRemaining
 }
