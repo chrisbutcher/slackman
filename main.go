@@ -69,6 +69,10 @@ func main() {
           c.String(http.StatusOK, "Game won! "+redisGameState.GameStatusLine())
           redisGameState.Initialize("hangman")
           db.SetGameState(redisGameState)
+        } else if redisGameState.GameOver {
+          c.String(http.StatusOK, "Game lost! "+redisGameState.GameStatusLine())
+          redisGameState.Initialize("hangman")
+          db.SetGameState(redisGameState)
         } else {
           db.SetGameState(redisGameState)
           c.String(http.StatusOK, redisGameState.GameStatusLine())
