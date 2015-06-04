@@ -9,7 +9,12 @@ import (
   "net/http"
   // "regexp"
   // "strings"
+  "bufio"
+  "math/rand"
+  "os"
 )
+
+var wordlist []string
 
 // binding:"required"
 type SlackCommand struct {
@@ -24,6 +29,11 @@ type SlackCommand struct {
   Text        string `form:"text"`
 }
 
+func newWord() string {
+  randomIndex := rand.Intn(len(wordlist))
+  return wordlist[randomIndex]
+}
+
 func main() {
   port := flag.String("port", "3000", "HTTP port")
   slack_token := flag.String("slack_token", "debug", "Slack verification token")
@@ -31,8 +41,27 @@ func main() {
   redis_pw := flag.String("redis_pw", "", "Redis password")
   flag.Parse()
 
+  wordlist = make([]string, 0)
+
+  wordListFile, err := os.Open("wordlist.txt")
+  defer wordListFile.Close()
+
+  if err != nil {
+    panic(err)
+  }
+
+  scanner := bufio.NewScanner(wordListFile)
+
+  for scanner.Scan() {
+    wordlist = append(wordlist, scanner.Text())
+  }
+
+  if err := scanner.Err(); err != nil {
+    panic(scanner.Err())
+  }
+
   gameState := hangman.GameState{}
-  gameState.Initialize("hangman")
+  gameState.Initialize(newWord())
 
   db := persistence.SlackmanDB{}
   db.Initialize(*redis_url, *redis_pw)
@@ -67,11 +96,11 @@ func main() {
 
         if redisGameState.GameWon {
           c.String(http.StatusOK, "Game won! "+redisGameState.GameStatusLine())
-          redisGameState.Initialize("hangman")
+          redisGameState.Initialize(newWord())
           db.SetGameState(redisGameState)
         } else if redisGameState.GameOver {
           c.String(http.StatusOK, "Game lost! "+redisGameState.GameStatusLine())
-          redisGameState.Initialize("hangman")
+          redisGameState.Initialize(newWord())
           db.SetGameState(redisGameState)
         } else {
           db.SetGameState(redisGameState)

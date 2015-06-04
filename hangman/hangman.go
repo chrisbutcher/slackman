@@ -26,7 +26,13 @@ func (g *GameState) GameStatusLine() string {
   lettersGuessed := "Guesses: [" + strings.Join(g.LettersGuessed, ",") + "] "
   guessesRemaining := "Guesses left: " + strconv.Itoa(g.GuessesRemaining)
 
-  return wordProgress + lettersGuessed + guessesRemaining
+  wordToGuess := ""
+
+  if g.GameOver {
+    return strings.Join(g.WordToGuess, "")
+  }
+
+  return wordProgress + lettersGuessed + guessesRemaining + wordToGuess
 }
 
 func (g *GameState) Initialize(rawWordToGuess string) {
